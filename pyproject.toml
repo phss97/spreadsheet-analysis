@@ -1,6 +1,6 @@
 [project]
 name = "spreadsheet_analysis"
-version = "0.1.0"
+version = "0.1.1"
 description = "Pandas-based analysis tool for CSV and XLSX files. Converts natural language queries into pandas operations for aggregations, filtering, grouping, and more."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
