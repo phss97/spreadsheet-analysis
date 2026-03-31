@@ -278,7 +278,16 @@ class SpreadsheetAnalysis(BaseTool):
         if df.empty:
             return "The file was loaded but contains no data."
 
-        # 2. Generate pandas code from the query
+        # 2. Build DataFrame summary for output
+        columns_info = ", ".join(
+            f"{col} ({df[col].dtype})" for col in df.columns
+        )
+        df_summary = (
+            f"**DataFrame loaded:** {df.shape[0]} rows x {df.shape[1]} columns\n"
+            f"**Columns:** {columns_info}\n"
+        )
+
+        # 3. Generate pandas code from the query
         llm = LLM(model=self.llm_model)
         user_prompt = _build_user_prompt(query, df)
 
@@ -290,24 +299,34 @@ class SpreadsheetAnalysis(BaseTool):
                 ],
             )
         except Exception as e:
-            return f"Error calling LLM for code generation: {e}"
+            return f"{df_summary}\nError calling LLM for code generation: {e}"
 
         code = _extract_code(response)
 
-        # 3. Validate the generated code
+        # 4. Validate the generated code
         validation_error = _validate_code(code)
         if validation_error:
-            return f"Safety check failed: {validation_error}\n\nGenerated code:\n```python\n{code}\n```"
+            return (
+                f"{df_summary}\n"
+                f"Safety check failed: {validation_error}\n\n"
+                f"**Generated code:**\n```python\n{code}\n```"
+            )
 
-        # 4. Execute the code
+        # 5. Execute the code
         try:
             result = _safe_execute(code, df)
         except Exception as e:
             return (
+                f"{df_summary}\n"
                 f"Error executing generated code: {e}\n\n"
-                f"Generated code:\n```python\n{code}\n```"
+                f"**Generated code:**\n```python\n{code}\n```"
             )
 
-        # 5. Format and return the result
+        # 6. Format and return the result with full context
         formatted = _format_result(result)
-        return f"**Query:** {query}\n\n**Result:**\n{formatted}"
+        return (
+            f"**Query:** {query}\n\n"
+            f"{df_summary}\n"
+            f"**Generated pandas code:**\n```python\n{code}\n```\n\n"
+            f"**Result:**\n{formatted}"
+        )
